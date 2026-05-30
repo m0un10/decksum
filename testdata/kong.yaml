@@ -1,0 +1,99 @@
+_format_version: "3.0"
+_workspace: default
+_info:
+  select_tags:
+    - team-payments
+plugins:
+  - name: prometheus
+  - name: correlation-id
+    config:
+      header_name: X-Request-ID
+  - name: rate-limiting
+    route: legacy-checkout
+    config:
+      minute: 20
+services:
+  - name: orders
+    url: https://orders.internal:8443
+    plugins:
+      - name: key-auth
+      - name: rate-limiting
+        config:
+          minute: 600
+    routes:
+      - name: orders-api
+        paths: [/orders]
+        methods: [GET, POST]
+        protocols: [https]
+      - name: orders-admin
+        paths: [/orders/admin]
+        methods: [GET, DELETE]
+        protocols: [https]
+        plugins:
+          - name: acl
+            config:
+              allow: [admins]
+  - name: payments
+    host: payments.internal
+    port: 80
+    protocol: http
+    routes:
+      - name: checkout
+        paths: [/checkout]
+        hosts: [api.example.com]
+        plugins:
+          - name: openid-connect
+            config:
+              issuer: https://idp.example.com
+      - name: legacy-checkout
+        paths: [/v0/checkout]
+        plugins:
+          - name: request-transformer
+            enabled: false
+  - name: docs
+    url: http://docs.internal
+    routes:
+      - name: public-docs
+        paths: [/docs]
+        protocols: [https]
+      - name: docs-mirror
+        paths: [/docs]
+        protocols: [https]
+  - name: reporting
+    url: https://reporting.internal
+routes:
+  - name: healthz
+    paths: [/healthz]
+    service:
+      name: orders
+  - name: stray
+    paths: [/stray]
+    service: billing
+consumers:
+  - username: mobile-app
+    keyauth_credentials:
+      - key: redacted-1
+    acls:
+      - group: users
+  - username: ops-console
+    keyauth_credentials:
+      - key: redacted-2
+    acls:
+      - group: admins
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 5000
+upstreams:
+  - name: orders.internal
+    targets:
+      - target: 10.0.1.10:8443
+      - target: 10.0.1.11:8443
+certificates:
+  - cert: "-----BEGIN CERTIFICATE-----"
+    key: "-----BEGIN PRIVATE KEY-----"
+    snis:
+      - name: api.example.com
+vaults:
+  - name: env
+    prefix: my-env
