@@ -10,11 +10,24 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 
 	"github.com/goccy/go-yaml"
 )
 
+// version is set by goreleaser via -ldflags "-X main.version=...". When the
+// binary was built with `go install module@version` instead, fall back to the
+// module version recorded in the build info.
 var version = "dev"
+
+func init() {
+	if version != "dev" {
+		return
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		version = bi.Main.Version
+	}
+}
 
 const usage = `decksum — summarise a Kong decK declarative config
 

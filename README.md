@@ -10,6 +10,8 @@ decK itself can validate, lint, diff and transform state files, but has no "what
 go install github.com/m0un10/decksum@latest
 ```
 
+Prebuilt binaries for Linux, macOS and Windows (amd64 and arm64) are attached to each [GitHub release](https://github.com/m0un10/decksum/releases), along with a `checksums.txt`.
+
 ## Usage
 
 ```bash
@@ -99,6 +101,23 @@ FINDINGS
 ## Limitations
 
 This is a single-file, read-only summariser: it doesn't merge multiple state files, resolve `{vault://…}` references, or know about plugin ordering or Konnect-specific entities beyond counting them. Route matching for the duplicate check is exact string comparison, not Kong's router semantics.
+
+## Releasing
+
+Releases are cut by pushing a semver tag. [GoReleaser](https://goreleaser.com) then builds the binaries, generates a changelog from the commits since the previous tag (grouped by `feat:` / `fix:` prefixes) and publishes a GitHub release.
+
+```bash
+git tag -a v1.2.3 -m "v1.2.3"
+git push origin v1.2.3
+```
+
+`go install github.com/m0un10/decksum@latest` resolves to the highest tagged version, so tagging is all that is needed to update `@latest`. Tags with a pre-release suffix (`v1.3.0-rc.1`) are published as GitHub pre-releases and are skipped by `@latest`.
+
+To test the release build locally without publishing:
+
+```bash
+go run github.com/goreleaser/goreleaser/v2@latest release --snapshot --clean
+```
 
 ## License
 
